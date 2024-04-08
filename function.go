@@ -62,7 +62,6 @@ func helloHTTP(w http.ResponseWriter, r *http.Request) {
 			// Handle only on text message
 			case webhook.TextMessageContent:
 				req := message.Text
-				// 檢查是否已經有這個用戶的 ChatSession or req == "reset"
 
 				// 取得用戶 ID
 				var uID string
