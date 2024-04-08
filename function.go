@@ -40,10 +40,10 @@ func init() {
 		log.Fatal(err)
 	}
 
-	functions.HTTP("HelloHTTP", helloHTTP)
+	functions.HTTP("HelloHTTP", HelloHTTP)
 }
 
-func helloHTTP(w http.ResponseWriter, r *http.Request) {
+func HelloHTTP(w http.ResponseWriter, r *http.Request) {
 	cb, err := webhook.ParseRequest(os.Getenv("ChannelSecret"), r)
 	if err != nil {
 		if err == linebot.ErrInvalidSignature {
@@ -143,6 +143,26 @@ func helloHTTP(w http.ResponseWriter, r *http.Request) {
 				log.Println("Finished processing image...", resp)
 				if err != nil {
 					log.Fatal(err)
+				}
+				var ret string
+				for _, cand := range resp.Candidates {
+					for _, part := range cand.Content.Parts {
+						ret = ret + fmt.Sprintf("%v", part)
+						log.Println(part)
+					}
+				}
+				if _, err := bot.ReplyMessage(
+					&messaging_api.ReplyMessageRequest{
+						ReplyToken: e.ReplyToken,
+						Messages: []messaging_api.MessageInterface{
+							&messaging_api.TextMessage{
+								Text: ret,
+							},
+						},
+					},
+				); err != nil {
+					log.Print(err)
+					return
 				}
 
 			// Handle only video message
