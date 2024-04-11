@@ -62,16 +62,30 @@ func HelloHTTP(w http.ResponseWriter, r *http.Request) {
 			// Handle only on text message
 			case webhook.TextMessageContent:
 				req := message.Text
+				ctx := context.Background()
+				client, err := genai.NewClient(ctx, option.WithAPIKey(geminiKey))
+				if err != nil {
+					log.Fatal(err)
+				}
+				defer client.Close()
+				model := client.GenerativeModel("gemini-pro")
+				cs := model.StartChat()
 
-				// 取得用戶 ID
-				var uID string
-				switch source := e.Source.(type) {
-				case *webhook.UserSource:
-					uID = source.UserId
-				case *webhook.GroupSource:
-					uID = source.UserId
-				case *webhook.RoomSource:
-					uID = source.UserId
+				send := func(msg string) *genai.GenerateContentResponse {
+					fmt.Printf("== Me: %s\n== Model:\n", msg)
+					res, err := cs.SendMessage(ctx, genai.Text(msg))
+					if err != nil {
+						log.Fatal(err)
+					}
+					return res
+				}
+				res := send(req)
+				var ret string
+				for _, cand := range res.Candidates {
+					for _, part := range cand.Content.Parts {
+						ret = ret + fmt.Sprintf("%v", part)
+						log.Println(part)
+					}
 				}
 
 				if _, err := bot.ReplyMessage(
@@ -79,29 +93,7 @@ func HelloHTTP(w http.ResponseWriter, r *http.Request) {
 						ReplyToken: e.ReplyToken,
 						Messages: []messaging_api.MessageInterface{
 							&messaging_api.TextMessage{
-								Text: fmt.Sprintf("UID: %s - 收到訊息: %s,  ", uID, req),
-							},
-						},
-					},
-				); err != nil {
-					log.Print(err)
-					return
-				}
-
-			// Handle only on Sticker message
-			case webhook.StickerMessageContent:
-				var kw string
-				for _, k := range message.Keywords {
-					kw = kw + "," + k
-				}
-
-				outStickerResult := fmt.Sprintf("收到貼圖訊息: %s, pkg: %s kw: %s  text: %s", message.StickerId, message.PackageId, kw, message.Text)
-				if _, err := bot.ReplyMessage(
-					&messaging_api.ReplyMessageRequest{
-						ReplyToken: e.ReplyToken,
-						Messages: []messaging_api.MessageInterface{
-							&messaging_api.TextMessage{
-								Text: outStickerResult,
+								Text: fmt.Sprintf(ret),
 							},
 						},
 					},
