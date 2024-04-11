@@ -23,9 +23,6 @@ var blob *messaging_api.MessagingApiBlobAPI
 var geminiKey string
 var channelToken string
 
-// 建立一個 map 來儲存每個用戶的 ChatSession
-var userSessions = make(map[string]*genai.ChatSession)
-
 func init() {
 	var err error
 	geminiKey = os.Getenv("GOOGLE_GEMINI_API_KEY")
@@ -62,26 +59,22 @@ func HelloHTTP(w http.ResponseWriter, r *http.Request) {
 			// Handle only on text message
 			case webhook.TextMessageContent:
 				req := message.Text
+
 				ctx := context.Background()
 				client, err := genai.NewClient(ctx, option.WithAPIKey(geminiKey))
 				if err != nil {
 					log.Fatal(err)
 				}
 				defer client.Close()
-				model := client.GenerativeModel("gemini-pro")
-				cs := model.StartChat()
 
-				send := func(msg string) *genai.GenerateContentResponse {
-					fmt.Printf("== Me: %s\n== Model:\n", msg)
-					res, err := cs.SendMessage(ctx, genai.Text(msg))
-					if err != nil {
-						log.Fatal(err)
-					}
-					return res
+				// For text-only input, use the gemini-pro model
+				model := client.GenerativeModel("gemini-pro")
+				resp, err := model.GenerateContent(ctx, genai.Text(req))
+				if err != nil {
+					log.Fatal(err)
 				}
-				res := send(req)
 				var ret string
-				for _, cand := range res.Candidates {
+				for _, cand := range resp.Candidates {
 					for _, part := range cand.Content.Parts {
 						ret = ret + fmt.Sprintf("%v", part)
 						log.Println(part)
@@ -93,7 +86,7 @@ func HelloHTTP(w http.ResponseWriter, r *http.Request) {
 						ReplyToken: e.ReplyToken,
 						Messages: []messaging_api.MessageInterface{
 							&messaging_api.TextMessage{
-								Text: fmt.Sprintf(ret),
+								Text: ret,
 							},
 						},
 					},
