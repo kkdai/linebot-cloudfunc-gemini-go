@@ -56,7 +56,8 @@ func HelloHTTP(w http.ResponseWriter, r *http.Request) {
 		switch e := event.(type) {
 		case webhook.MessageEvent:
 			switch message := e.Message.(type) {
-			// Handle only on text message
+
+			// Handle only text messages
 			case webhook.TextMessageContent:
 				req := message.Text
 
@@ -67,7 +68,7 @@ func HelloHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				defer client.Close()
 
-				// For text-only input, use the gemini-pro model
+				// Pass the text content to the gemini-pro model for text generation
 				model := client.GenerativeModel("gemini-pro")
 				resp, err := model.GenerateContent(ctx, genai.Text(req))
 				if err != nil {
@@ -95,15 +96,16 @@ func HelloHTTP(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 
-			// Handle only image message
+			// Handle only image messages
 			case webhook.ImageMessageContent:
 				log.Println("Got img msg ID:", message.Id)
 
-				//Get image binary from LINE server based on message ID.
+				// Get image content through message.Id
 				content, err := blob.GetMessageContent(message.Id)
 				if err != nil {
 					log.Println("Got GetMessageContent err:", err)
 				}
+				// Read image content
 				defer content.Body.Close()
 				data, err := io.ReadAll(content.Body)
 				if err != nil {
@@ -116,19 +118,18 @@ func HelloHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				defer client.Close()
 
+				// Pass the image content to the gemini-pro-vision model for image description
 				model := client.GenerativeModel("gemini-pro-vision")
-				value := float32(0.8)
-				model.Temperature = &value
 				prompt := []genai.Part{
 					genai.ImageData("png", data),
 					genai.Text("Describe this image with scientific detail, reply in zh-TW:"),
 				}
-				log.Println("Begin processing image...")
 				resp, err := model.GenerateContent(ctx, prompt...)
-				log.Println("Finished processing image...", resp)
 				if err != nil {
 					log.Fatal(err)
 				}
+
+				// Get the returned content
 				var ret string
 				for _, cand := range resp.Candidates {
 					for _, part := range cand.Content.Parts {
@@ -136,6 +137,8 @@ func HelloHTTP(w http.ResponseWriter, r *http.Request) {
 						log.Println(part)
 					}
 				}
+
+				// Reply message
 				if _, err := bot.ReplyMessage(
 					&messaging_api.ReplyMessageRequest{
 						ReplyToken: e.ReplyToken,

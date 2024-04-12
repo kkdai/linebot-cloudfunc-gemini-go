@@ -17,6 +17,10 @@ The server can handle the following types of events:
 - Postback events: The server logs the postback data.
 - Beacon events: The server logs the beacon hardware ID.
 
+## How to build it?
+
+Please refer Chinese HowTo Document: [[BwAI workshop][Golang] LINE OA + CloudFunction + GeminiPro + Firebase = 旅行小幫手 LINE 聊天機器人(一)： 景色辨識小幫手](https://www.evanlin.com/linebot-cloudfunc-firebase-gemini-workshop/)
+
 ## Dependencies
 
 This server uses the `functions-framework-go` package from Google Cloud Platform to register the function, the `line-bot-sdk-go` package to interact with the LINE Messaging API, and the `generative-ai-go` package to interact with the Google Gemini API. It also uses the standard `net/http`, `fmt`, `log`, `os`, `io`, and `context` packages from the Go standard library.
